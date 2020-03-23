@@ -1,4 +1,6 @@
 {
+    "name" : "apolinux/commandrun" ,
+    "description" : "command line interface running method classes as parameters",
     "autoload": {
         "psr-4": {
             "Apolinux\\": "src/"
