@@ -2,6 +2,18 @@
 
 namespace Apolinux;
 
+/**
+ * main class that parse input commands and call method classes
+ * 
+ * 
+ * By default receive global $argv as argument list but it can receive custom array arguments.
+ * 
+ * Uses PHP Reflection classes to get information about classes, methods and parameters.
+ * 
+ * It can define custom classed directory by config or by parameters.
+ * 
+ * It supports help and listing when it is required.
+ */
 class CommandRun {
     
     private $classes_dir ;
@@ -10,6 +22,15 @@ class CommandRun {
         $this->classes_dir = $classes_dir ;
     }
     
+    /**
+     * run main program
+     * 
+     * read arguments, instance classes and call method when it's necessary. 
+     * Also shows a help about the tool and the classes and methods configured.
+     * 
+     * @param array $arg_list argument list including running command as first item
+     * @return void
+     */
     public function start(array $arg_list=null){
         if($arg_list==null){
             $arg_list = $GLOBALS['argv'] ;
@@ -18,7 +39,7 @@ class CommandRun {
         try{
             $runclass = $this->checkArgumentsInput($arg_list);
         }catch(\Exception $e){
-            return $this->message($e->getMessage()) ;
+            return $this->message($e->getMessage(), ($e->getCode() === 2) ? false : true) ;
         }
         // end check args
         
@@ -42,6 +63,15 @@ class CommandRun {
         call_user_func_array([$object, $method], $method_params);
     }
     
+    /**
+     * parse parameters of method using reflection and return method parameters
+     * 
+     * @param array $arg_list argument list
+     * @param string $runclass running class name
+     * @param string $method method name
+     * @return array method parameters list
+     * @throws \Exception
+     */
     private function parseParamsMethod($arg_list, $runclass, &$method){
         $arg_parser = new CliArgumentParser();
         $rmethod = new \ReflectionMethod($runclass, $method);
@@ -59,6 +89,15 @@ class CommandRun {
         return $method_params ;
     }
     
+    /**
+     * validate arguments from argument list
+     * 
+     * check for list and helper requirement
+     * 
+     * @param array $arg_list
+     * @return string running class, if there is one
+     * @throws \Exception
+     */
     private function checkArgumentsInput(&$arg_list){
         // validate number of parameters
         if(count($arg_list) < 2){
@@ -75,7 +114,7 @@ class CommandRun {
             array_shift($arg_list) ;
             // sequence is -l -d | --classdir=class
             $this->detectClassesDir($arg_list);
-            throw new \Exception($this->listClasses());
+            throw new \Exception($this->listClasses(),2);
         }
         
         $this->detectClassesDir($arg_list);
@@ -83,7 +122,7 @@ class CommandRun {
         $currarg = array_shift($arg_list);
         if(in_array($currarg,['--list', '-l'],true)){
             // sequence is -d | --classdir=class  -l
-            throw new \Exception($this->listClasses());
+            throw new \Exception($this->listClasses(),2);
         }
         $runclass = $currarg;
         
@@ -94,6 +133,11 @@ class CommandRun {
         return $runclass ;
     }
     
+    /**
+     * verifies if there is arguments defining classes directory
+     * 
+     * @param array $arg_list
+     */
     private function detectClassesDir(&$arg_list){
         if(isset($arg_list[0]) 
                 && in_array($arg_list[0],['-d', '--classdir'],true) 
@@ -102,11 +146,14 @@ class CommandRun {
             $this->classes_dir = array_shift($arg_list);
         }
     }
-    
-    /*private function fail($msg){
-        throw new \Exception("$msg". PHP_EOL) ;
-    }*/
-    
+ 
+    /**
+     * shows a message with help optionally
+     * 
+     * @param string $message
+     * @param bool $show_help
+     * @return void
+     */
     private function message($message, $show_help=true){
         if($show_help){
             return $this->help($message);
@@ -114,6 +161,11 @@ class CommandRun {
         echo "$message". PHP_EOL ;
     }
     
+    /**
+     * returns main command help
+     * 
+     * @param string $message
+     */
     private function help($message){
         $message = $message ? $message . PHP_EOL : '';
         $command = basename($GLOBALS['argv'][0]) ;
@@ -132,12 +184,18 @@ $message
 END;        
     }
     
+    /**
+     * get a classes list from directory defined
+     * 
+     * @return string
+     */
     private function listClasses(){
         $out =['classes list:'];
         foreach(glob($this->classes_dir .'/*.php') as $file){
-            $out[] = preg_replace('/.php$/','',basename($file)) ;
+            $out[] = ' * ' . preg_replace('/.php$/','',basename($file)) ;
         }
-        $out[]='';
+        $command = basename($GLOBALS['argv'][0]) ;
+        $out[]="To view method details of class run as $command ... ClassName -h";
         return join(PHP_EOL,$out);
     }
 }

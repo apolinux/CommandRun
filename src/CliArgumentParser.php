@@ -2,34 +2,25 @@
 
 namespace Apolinux;
 
+/**
+ * parse argument list
+ * 
+ */
 class CliArgumentParser{
     
-    /*public function parseForCmd($args, $params){
-        $out=[] ;
-        foreach($args as $argument){
-            // of form: --ab=cd -a=mn --a -b
-            if(preg_match('/^(?|(?:--(\w+))|(?:-(\w)))(?:=(.*))?$/', $argument, $match)){
-                $parameter=$match[1];
-                $value=$match[2] ?? null;
-                
-                $out[$parameter]=$value ;
-            }
-        }
-        
-        return $out ;
-    }*/
-    
     /**
-     * 
-     * argument is like the forms:
-     * - ^--(\w+)=(.*)$
-     * - ^--(\w+)$  => in this case depend of previous config, can be an argument or not
-     * 
+     * parse argument list of form:
+     * *  --param1=value1 -p=t --param2 -q -help other
+     * using regular expresions
+     *  * param double : of form: --paramx=valuex or --paramx
+     *  * param extra: -help -h or paramY
+     * @param array $args argument list
+     * @return array containing param double and param extra
      */
     public function parse($args){
         $param_double=[] ; // --param=value or --param value or --param
         $param_extra=null;
-        $cont=0; //echo "args:". print_r($args,1);
+        $cont=0; 
         foreach($args as $argument){
             $cont++;
             if(preg_match('/^--(\w+)=(.*)$/', $argument, $match)){

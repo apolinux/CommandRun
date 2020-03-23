@@ -8,11 +8,10 @@ class CommandRunTest extends TestCase{
         // define enviroment and input arguments
         $argv=['fido', 'TestRunClass', '--param1=555','--param2=true'];
         
-        // define command running class
-        
         // run command
         ob_start();
-        $cmd = new \Apolinux\CommandRun(__DIR__);
+        // define command running class
+        $cmd = new \Apolinux\CommandRun(__DIR__ .'/Commands');
         $cmd->start($argv);
         $output = ob_get_clean();
         // validate answer
@@ -29,7 +28,7 @@ class CommandRunTest extends TestCase{
         
         // run command
         ob_start();
-        $cmd = new \Apolinux\CommandRun(__DIR__);
+        $cmd = new \Apolinux\CommandRun(__DIR__.'/Commands');
         $cmd->start($argv);
         $output = ob_get_clean();
         // validate answer
@@ -42,7 +41,7 @@ class CommandRunTest extends TestCase{
         
         // run command
         ob_start();
-        $cmd = new \Apolinux\CommandRun(__DIR__);
+        $cmd = new \Apolinux\CommandRun(__DIR__.'/Commands');
         $cmd->start($argv);
         $output = ob_get_clean();
         // validate answer
@@ -56,10 +55,76 @@ class CommandRunTest extends TestCase{
         
         // run command
         ob_start();
-        $cmd = new \Apolinux\CommandRun(__DIR__);
+        $cmd = new \Apolinux\CommandRun(__DIR__.'/Commands');
         $cmd->start($argv);
         $output = ob_get_clean();
         // validate answer
         $this->assertStringContainsString('classes list', $output);
+    }
+    
+    public function testRunCmdClassHelp(){
+        // define enviroment and input arguments
+        $argv=['fido', 'TestRunClass', '-h'];
+        
+        // run command
+        ob_start();
+        $cmd = new \Apolinux\CommandRun(__DIR__.'/Commands');
+        $cmd->start($argv);
+        $output = ob_get_clean();
+        // validate answer
+        $this->assertStringContainsString('method list for class', $output);
+        $this->assertStringContainsString('::run [default] ( int $param1', $output);
+    }
+    
+    public function testRunCmdMissingParameter(){
+        // define enviroment and input arguments
+        $argv=['fido', 'TestRunClass', 'run'];
+        
+        // run command
+        ob_start();
+        $cmd = new \Apolinux\CommandRun(__DIR__.'/Commands');
+        $cmd->start($argv);
+        $output = ob_get_clean();
+        // validate answer
+        $this->assertStringContainsString("The parameter 'param1' is not defined", $output);
+    }
+    
+    public function testRunCmdListingMethods(){
+        // define enviroment and input arguments
+        $argv=['fido', 'TestRunClass', '-h'];
+        
+        // run command
+        ob_start();
+        $cmd = new \Apolinux\CommandRun(__DIR__.'/Commands');
+        $cmd->start($argv);
+        $output = ob_get_clean();
+        // validate answer
+        $this->assertStringContainsString(' * ::run [default] ( int $param1', $output);
+    }
+    
+    public function testRunCmdClassNotValid(){
+        // define enviroment and input arguments
+        $argv=['fido', 'NotValidClass'];
+        
+        // run command
+        ob_start();
+        $cmd = new \Apolinux\CommandRun(__DIR__.'/Commands');
+        $cmd->start($argv);
+        $output = ob_get_clean();
+        // validate answer
+        $this->assertStringContainsString("class 'NotValidClass' can not be loaded", $output);
+    }
+    
+    public function testRunCmdMethodNotValid(){
+        // define enviroment and input arguments
+        $argv=['fido', 'TestRunClass' ,'notvalidmethod'];
+        
+        // run command
+        ob_start();
+        $cmd = new \Apolinux\CommandRun(__DIR__.'/Commands');
+        $cmd->start($argv);
+        $output = ob_get_clean();
+        // validate answer
+        $this->assertStringContainsString("Method TestRunClass::notvalidmethod() does not exist", $output);
     }
 }
