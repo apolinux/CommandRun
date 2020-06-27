@@ -17,6 +17,8 @@ namespace Apolinux;
 class CommandRun {
     
     private $classes_dir ;
+
+    private $class_list = [] ;
     
     public function __construct($classes_dir=''){
         $this->classes_dir = $classes_dir ;
@@ -38,29 +40,69 @@ class CommandRun {
         // check args
         try{
             $runclass = $this->checkArgumentsInput($arg_list);
-        }catch(\Exception $e){
+        }catch(CommandRunException $e){
             return $this->message($e->getMessage(), ($e->getCode() === 2) ? false : true) ;
         }
         // end check args
         
-        $class_file = $this->classes_dir .'/' . $runclass. '.php' ;
-        
-        if(! file_exists($class_file)){
-            return $this->message("file '$class_file' of class '$runclass' can not be loaded") ;
+        try{
+            //$object = $this->getClassObject();
+            $class_resource = $this->getClassObject($runclass);
+        }catch(CommandRunException $e){
+            return $this->message($e->getMessage()) ;
         }
-        
-        require_once $class_file;
-        
-        $object = new $runclass;
+        $object = new $class_resource ;
         $method = 'run';
         
         try{
-            $method_params = $this->parseParamsMethod($arg_list, $runclass, $method);
-        }catch(\Exception $e){
+            $method_params = $this->parseParamsMethod($arg_list, $object, $method);
+        }catch(CommandRunException $e){
             return $this->message($e->getMessage(),false) ;
         }
         
         call_user_func_array([$object, $method], $method_params);
+    }
+    
+    private function getClassObject($runclass){
+        // anonymous class
+        if( count($this->class_list) > 0 ){
+            $class_res = $this->requireClassAnonymous($runclass);
+        }else{
+            $this->requireClassFile($runclass) ;
+            //$object = new $runclass;
+            $class_res = $runclass ;
+        }
+        
+        //return $object ;
+        return $class_res ;
+    }
+    
+    private function requireClassAnonymous($runclass){
+        $class_found = false ;
+        foreach($this->class_list as $classname => $anonclass){
+            //list($anonclass , $classname ) = $class_info;
+            if($runclass == $classname){
+                //throw new \Exception('invalid class');
+                $class_found = $anonclass ;
+                break ;
+            }
+        }
+        if(! $class_found){
+            throw new CommandRunException("class '$runclass' not found in internal list") ;
+        }
+        //$object = new $anonclass;
+        return $class_found ;
+    }
+    
+    private function requireClassFile($runclass){
+        $class_file = $this->classes_dir .'/' . $runclass. '.php' ;
+        
+        if(! file_exists($class_file)){
+            //return $this->message("file '$class_file' of class '$runclass' can not be loaded") ;
+            throw new CommandRunException("file '$class_file' of class '$runclass' can not be loaded") ;
+        }
+        
+        require_once $class_file;
     }
     
     /**
@@ -79,7 +121,7 @@ class CommandRun {
         list( $arg_proc , $arg_extra )= $arg_parser->parse($arg_list);
         $reflection = new ReflectionMethod;
         if($arg_extra == 'help'){
-            throw new \Exception($reflection->getMethodList($rmethod->getDeclaringClass()));
+            throw new CommandRunException($reflection->getMethodList($rmethod->getDeclaringClass()));
         }
         if($arg_extra){ // other method
             $method = $arg_extra ;
@@ -101,20 +143,20 @@ class CommandRun {
     private function checkArgumentsInput(&$arg_list){
         // validate number of parameters
         if(count($arg_list) < 2){
-            throw new \Exception('Missing classname as first parameter');
+            throw new CommandRunException('Missing classname as first parameter');
         }
         $thiscmd = array_shift($arg_list) ;
         
         $currarg = $arg_list[0];
         if(in_array($currarg,['--help', '-h'],true)){
-            throw new \Exception('');
+            throw new CommandRunException('');
         }
         
         if(in_array($currarg,['--list', '-l'],true)){
             array_shift($arg_list) ;
             // sequence is -l -d | --classdir=class
             $this->detectClassesDir($arg_list);
-            throw new \Exception($this->listClasses(),2);
+            throw new CommandRunException($this->listClasses(),2);
         }
         
         $this->detectClassesDir($arg_list);
@@ -122,12 +164,12 @@ class CommandRun {
         $currarg = array_shift($arg_list);
         if(in_array($currarg,['--list', '-l'],true)){
             // sequence is -d | --classdir=class  -l
-            throw new \Exception($this->listClasses(),2);
+            throw new CommandRunException($this->listClasses(),2);
         }
         $runclass = $currarg;
         
         if(is_null($runclass)){
-            throw new \Exception('Must specify classname command') ;
+            throw new CommandRunException('Must specify classname command') ;
         }
         
         return $runclass ;
@@ -197,5 +239,13 @@ END;
         $command = basename($GLOBALS['argv'][0]) ;
         $out[]="To view method details of class run as $command ... ClassName -h";
         return join(PHP_EOL,$out);
+    }
+    
+    /**
+     * 
+     * @param array $class_list
+     */
+    public function setAnonymousClasses(Array $class_list){
+        $this->class_list = $class_list ;
     }
 }

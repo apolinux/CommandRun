@@ -127,4 +127,28 @@ class CommandRunTest extends TestCase{
         // validate answer
         $this->assertStringContainsString("Method TestRunClass::notvalidmethod() does not exist", $output);
     }
+    
+    public function testAnonymousClass(){
+        $message = "run from anonymous class" ;
+        $GLOBALS['message'] = $message ;
+        $class = new class {
+          public function run(){
+              echo $GLOBALS['message'] ;
+          }  
+        };
+        
+        ob_start();
+        
+        // define enviroment and input arguments
+        $argv=['fido', 'testanonymous' ,'run'];
+        
+        $cmd = new \Apolinux\CommandRun();
+        $cmd->setAnonymousClasses([
+                    'testanonymous' => $class
+                ]);
+        $cmd->start($argv);
+        $output = ob_get_clean();
+        // validate answer
+        $this->assertStringContainsString($message, $output);
+    }
 }

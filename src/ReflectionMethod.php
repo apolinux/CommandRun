@@ -19,7 +19,11 @@ class ReflectionMethod {
      * @return array list of parameter values
      */
     public function getParams($arg_proc, $runclass,$method){
-        $rmethod = new \ReflectionMethod($runclass, $method);
+        try{
+            $rmethod = new \ReflectionMethod($runclass, $method);
+        }catch(\ReflectionException $e){
+            throw new CommandRunException($e->getMessage()) ;
+        }
         
         $parameter_list = $rmethod->getParameters();
         $param_out=[];
@@ -29,7 +33,7 @@ class ReflectionMethod {
                 $param_out[] = $this->getValueByType($parameter,$arg_proc[$parameter->name]) ;
             }else{
                 if(! $parameter->isOptional()){
-                    throw new \Exception("The parameter '$parameter->name' is not defined. Parameters are defined like '--paramX=valueX'.".
+                    throw new CommandRunException("The parameter '$parameter->name' is not defined. Parameters are defined like '--paramX=valueX'.".
                             PHP_EOL . "Method definition: ". $this->getDetailsMethodParameters($rmethod));
                 }
                 $param_out[] = $this->getValueByType($parameter) ;
