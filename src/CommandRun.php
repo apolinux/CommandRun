@@ -2,6 +2,10 @@
 
 namespace Apolinux;
 
+use \Apolinux\ClassManager\ClassContainer;
+use \Apolinux\ClassManager\ClassNotFoundException;
+use \Apolinux\ClassManager\ClassNotDefinedException;
+
 /**
  * main class that parse input commands and call method classes
  * 
@@ -16,12 +20,14 @@ namespace Apolinux;
  */
 class CommandRun {
     
-    private $classes_dir ;
-
-    private $class_list = [] ;
+    /**
+     * class container: contain a list of class containers 
+     * @var \Apolinux\ClassManager\ClassContainer
+     */
+    private $class_container ;
     
-    public function __construct($classes_dir=''){
-        $this->classes_dir = $classes_dir ;
+    public function __construct(ClassContainer $class_container){
+        $this->class_container = $class_container ;
     }
     
     /**
@@ -46,12 +52,12 @@ class CommandRun {
         // end check args
         
         try{
-            //$object = $this->getClassObject();
-            $class_resource = $this->getClassObject($runclass);
-        }catch(CommandRunException $e){
-            return $this->message($e->getMessage()) ;
+            $object = $this->class_container->instance($runclass) ;
+        }catch(ClassNotFoundException $e){
+            return $this->message("The classname '". $e->getMessage()."' was not found in class pool") ;
+        }catch(ClassNotDefinedException $e){
+            return $this->message("The classname '". $e->getMessage()."' was not defined in class pool") ;
         }
-        $object = new $class_resource ;
         $method = 'run';
         
         try{
@@ -61,48 +67,6 @@ class CommandRun {
         }
         
         call_user_func_array([$object, $method], $method_params);
-    }
-    
-    private function getClassObject($runclass){
-        // anonymous class
-        if( count($this->class_list) > 0 ){
-            $class_res = $this->requireClassAnonymous($runclass);
-        }else{
-            $this->requireClassFile($runclass) ;
-            //$object = new $runclass;
-            $class_res = $runclass ;
-        }
-        
-        //return $object ;
-        return $class_res ;
-    }
-    
-    private function requireClassAnonymous($runclass){
-        $class_found = false ;
-        foreach($this->class_list as $classname => $anonclass){
-            //list($anonclass , $classname ) = $class_info;
-            if($runclass == $classname){
-                //throw new \Exception('invalid class');
-                $class_found = $anonclass ;
-                break ;
-            }
-        }
-        if(! $class_found){
-            throw new CommandRunException("class '$runclass' not found in internal list") ;
-        }
-        //$object = new $anonclass;
-        return $class_found ;
-    }
-    
-    private function requireClassFile($runclass){
-        $class_file = $this->classes_dir .'/' . $runclass. '.php' ;
-        
-        if(! file_exists($class_file)){
-            //return $this->message("file '$class_file' of class '$runclass' can not be loaded") ;
-            throw new CommandRunException("file '$class_file' of class '$runclass' can not be loaded") ;
-        }
-        
-        require_once $class_file;
     }
     
     /**
@@ -233,19 +197,11 @@ END;
      */
     private function listClasses(){
         $out =['classes list:'];
-        foreach(glob($this->classes_dir .'/*.php') as $file){
-            $out[] = ' * ' . preg_replace('/.php$/','',basename($file)) ;
+        foreach($this->class_container->listClasses() as $class){
+            $out[] = ' * ' . $class ;
         }
         $command = basename($GLOBALS['argv'][0]) ;
         $out[]="To view method details of class run as $command ... ClassName -h";
         return join(PHP_EOL,$out);
-    }
-    
-    /**
-     * 
-     * @param array $class_list
-     */
-    public function setAnonymousClasses(Array $class_list){
-        $this->class_list = $class_list ;
     }
 }

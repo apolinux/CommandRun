@@ -93,6 +93,31 @@ Where class TestRunClass is defined here:
         }
     }
 
+New in version 0.6
+------------------
+
+Using anonymous classes. It can be used with a anonymous class list. Example:
+
+$message = "run from anonymous class" ;
+
+$class = new class {
+  public function run(){
+      echo $GLOBALS['message'] ;
+  }  
+};
+
+ob_start();
+
+// define enviroment and input arguments
+$argv=['fido', 'testanonymous' ,'run'];
+
+$cmd = new \Apolinux\CommandRun();
+$cmd->setAnonymousClasses([
+            'testanonymous' => $class
+        ]);
+$cmd->start($argv);
+$output = ob_get_clean();
+
 Details
 -------
 
