@@ -119,11 +119,11 @@ class CommandRun {
         if(in_array($currarg,['--list', '-l'],true)){
             array_shift($arg_list) ;
             // sequence is -l -d | --classdir=class
-            $this->detectClassesDir($arg_list);
+            //$this->detectClassesDir($arg_list);
             throw new CommandRunException($this->listClasses(),2);
         }
         
-        $this->detectClassesDir($arg_list);
+        //$this->detectClassesDir($arg_list);
         
         $currarg = array_shift($arg_list);
         if(in_array($currarg,['--list', '-l'],true)){
@@ -144,14 +144,14 @@ class CommandRun {
      * 
      * @param array $arg_list
      */
-    private function detectClassesDir(&$arg_list){
+    /*private function detectClassesDir(&$arg_list){
         if(isset($arg_list[0]) 
                 && in_array($arg_list[0],['-d', '--classdir'],true) 
                 && isset($arg_list[1])){
             array_shift($arg_list);
             $this->classes_dir = array_shift($arg_list);
         }
-    }
+    }*/
  
     /**
      * shows a message with help optionally
@@ -177,7 +177,7 @@ class CommandRun {
         $command = basename($GLOBALS['argv'][0]) ;
         echo <<<END
 command run 
-Usage: $command [ -h | --help ] [ -l | --list ] [ -d | --classdir=classdir ] ClassName [ -h | -help ] [ method ] [ --param1=value1 ] [ --param2=value2 ] ...
+Usage: $command [ -h | --help ] [ -l | --list ] ClassName [ -h | -help ] [ method ] [ --param1=value1 ] [ --param2=value2 ] ...
 where:
     -h | --help     : shows this help.
     -l | --list     : shows a list of possible classname commands.

@@ -19,10 +19,16 @@ get info about every class configured to be called.
 It is provided a file called cmdrun.php to show how the program must be called:
 
 
-    #!/bin/env php
-    <?php
+    use \Apolinux\ClassManager\DirectoryClassType;
+    use \Apolinux\ClassManager\ClassContainer;
+
     require __DIR__ .'/vendor/autoload.php' ;
-    $cmd = new \Apolinux\CommandRun();
+
+    $container = new ClassContainer ;
+    $container->add(new DirectoryClassType(__DIR__. '/test/unit/Commands'));
+
+    $cmd = new \Apolinux\CommandRun($container);
+
     $cmd->start();
 
 
@@ -34,37 +40,39 @@ when is executed:
 
 it shows:
 
-    command run                                                                                                                                           
-    Usage: cmdrun.php [ -h | --help ] [ -l | --list ] [ -d | --classdir=classdir ] ClassName [ -h | -help ] [ method ] [ --param1=value1 ] [ --param2=value2 ] ...                          
-    where:                                                                                                                                                
+    command run 
+    Usage: cmdrun.php [ -h | --help ] [ -l | --list ] ClassName [ -h | -help ] [ method ] [ --param1=value1 ] [ --param2=value2 ] ...
+    where:
         -h | --help     : shows this help.
         -l | --list     : shows a list of possible classname commands.
         -d | --classdir : specify classes directory where to find class commands.
         ClassName       : name of class that contains "run" method with command instructions.
         -h | -help      : after classname. show class methods available with their respective parameters.
         method          : alternative method to be called.
-        --paramX=valueX : parameter names of run (or "method") method in ClassName class.                           
-    Missing classname as first parameter
+        --paramX=valueX : parameter names of run (or "method") method in ClassName class.
 
 
 using a test dir:
 
-    ./cmdrun.php  -d ./test/unit/Commands -l                                                                                                                     
+    ./cmdrun.php -l                                                                                                                     
     classes list:
      * TestProcess
      * TestRunClass
     To view method details of class run as cmdrun.php ... ClassName -h
-    [drake@pollux CommandRun]$ ./cmdrun.php  -d ./test/unit/Commands TestRunClass                                                                                                           
+
+    ./cmdrun.php TestRunClass                                                                                                           
     The parameter 'param1' is not defined. Parameters are defined like '--paramX=valueX'.
     Method definition: ::run [default] ( int $param1, bool $param2, undefined $param3=null, string $param4='' )
-    [drake@pollux CommandRun]$ ./cmdrun.php  -d ./test/unit/Commands TestRunClass --param1=541 --param2=false                                                                               
+
+    ./cmdrun.php TestRunClass --param1=541 --param2=false                                                                               
     in method TestRunClass::run
     receive parameters:  
     param1:541
     param2:false
     param3:
     param4:
-    [drake@pollux CommandRun]$ ./cmdrun.php  -d ./test/unit/Commands TestRunClass --param1=541 --param2=false --param3=11 --param4="hey you!"                                               
+
+    ./cmdrun.php TestRunClass --param1=541 --param2=false --param3=11 --param4="hey you!"                                               
     in method TestRunClass::run
     receive parameters:  
     param1:541
@@ -93,30 +101,61 @@ Where class TestRunClass is defined here:
         }
     }
 
-New in version 0.6
+New in version 0.7
 ------------------
 
-Using anonymous classes. It can be used with a anonymous class list. Example:
+Using anonymous and custom classes. It can be used with a anonymous class list. Example:
+    
+     $argv=['cmd', '-l'];
 
-$message = "run from anonymous class" ;
+    class testInternal {
+        public function run(){
+            echo 'in class testInternal' ;
+        }
+    };
 
-$class = new class {
-  public function run(){
-      echo $GLOBALS['message'] ;
-  }  
-};
+    class testInternal2{
+        public function run(){
+            echo 'in class testInternal2';
+        }
+    };
 
-ob_start();
+    $argv=['fido', '-l'];
+        
+    $class_list = [
+        'testanonymous1' => new class{
+            public function run(){
+                echo 'in class testanonymous1' ;
+            }
+        } ,
+        'testanonymous2' => new class{
+              public function run(){
+                  echo 'in class testanonymous2' ;
+              }
+        }
+    ];
 
-// define enviroment and input arguments
-$argv=['fido', 'testanonymous' ,'run'];
+    // run command
+    
+    $class_container = new ClassContainer();
+    $class_container->add(new DirectoryClassType(__DIR__ .'/Commands'));
+    $class_container->add(new AnonymousClassType($class_list));
+    $class_container->add(new InternalClassType(['testInternal',testInternal2::class ]) );  // define explicitamente las clases
 
-$cmd = new \Apolinux\CommandRun();
-$cmd->setAnonymousClasses([
-            'testanonymous' => $class
-        ]);
-$cmd->start($argv);
-$output = ob_get_clean();
+    $cmd = new \Apolinux\CommandRun($class_container);
+    $cmd->start($argv);
+    
+will get something like this:
+
+    php -d display_errors=1 test.php -l
+    classes list:
+     * testanonymous1
+     * testanonymous2
+     * testInternal
+     * testInternal2
+    To view method details of class run as test.php ... ClassName -h
+  
+  
 
 Details
 -------
